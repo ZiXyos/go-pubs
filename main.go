@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+  "zixyos/goedges/server"
 )
 
 
 func main() {
   fmt.Println("[MAIN::LOG]: -> init")
-  server, err := NewServer(":9091")
+  server, err := server.NewServer(":9091")
 
   if err != nil {
     fmt.Println(err)

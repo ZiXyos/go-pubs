@@ -1,10 +1,11 @@
-package main
+package server
 
 import (
 	"fmt"
 	"net"
 	"sync"
 	"zixyos/goedges/utils"
+  . "zixyos/goedges/client"
 )
 
 type Server struct {
@@ -48,7 +49,7 @@ func (s *Server) addClient(con net.Conn) *Client {
   client := NewClient(clientId)
 
   go func() {
-    client.conn <- con
+    client.Conn <- con
   }()
 
   s.client[clientId] = client
@@ -69,11 +70,8 @@ func (s *Server) handleClient(conn net.Conn) {
   defer s.wg.Done()
   fmt.Println("New Connections here")
   client := s.addClient(conn)
-  defer s.removeClient(client.id)
-  fmt.Println("NEW CLIENT CONNECTED: ", client.id)
-
-  conn.Close()
-
+  fmt.Println("NEW CLIENT CONNECTED: ", client.Id)
+  s.receive_command(client)
 }
 
 func NewServer(port string) (*Server, error) {

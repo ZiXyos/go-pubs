@@ -1,18 +1,18 @@
-package main
+package client
 
 import (
 	"net"
 )
 
 type Client struct {
-  id string
-  conn chan net.Conn
+  Id string
+  Conn chan net.Conn
 }
 
 func NewClient(id string) *Client {
   return &Client { 
-    id: id,
-    conn: make(chan net.Conn), 
+    Id: id,
+    Conn: make(chan net.Conn), 
   }
 }
 
