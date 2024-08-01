@@ -15,6 +15,7 @@ type Server struct {
   shutdown chan struct{}
   Listener net.Listener
   client (map[string] *Client)
+  topic (map[string] *Topic)
 }
 
 func (s *Server) Start() {
@@ -85,5 +86,6 @@ func NewServer(port string) (*Server, error) {
     conn: make(chan net.Conn),
     shutdown: make(chan struct{}),
     client: make(map[string] *Client),
+    topic: make(map[string] *Topic),
   }, nil
 }
