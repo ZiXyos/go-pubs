@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+
 	"go.step.sm/crypto/randutil"
 )
 
@@ -11,4 +13,9 @@ func GenerateRandom() string {
   }
 
   return rand
+}
+
+func GenerateCommand(newCommand string, commandList *[]string) {
+  fmt.Println("INIT SERVER COMMAND")
+  *commandList = append(*commandList, newCommand);
 }
