@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"slices"
 	"strings"
 	"time"
 	"zixyos/goedges/client"
-	"zixyos/goedges/utils"
 )
 
 func (s *Server) receive_command(client *client.Client) {
@@ -30,26 +28,33 @@ func (s *Server) receive_command(client *client.Client) {
       }
 
       message = strings.TrimSpace(message);
-      fmt.Println(message)
+      fmt.Println("[LOG::RECEIVED::MESSAGE]", message)
       response := s.handle_command(client, message) 
-      fmt.Println("COMMAND HANDLED")
       conn.SetWriteDeadline(time.Now().Add(5 * time.Minute));
-      n, err := conn.Write([]byte(response + "\n"));
+      _, err = conn.Write([]byte(response + "\n"));
       if err != nil {
         fmt.Printf("Error writing to client %s: %v\n", client.Id, err)
         break
       }
-
-      fmt.Println(n);
     }
   }(<-client.Conn)
 }
 
 func (s *Server) handle_command(client *client.Client, entry string) string {
-  fmt.Println("HANDLING COMMAND")
-  commands := make([]string, 0, 10);
-  utils.GenerateCommand("SUB", &commands);
-
-   fmt.Println(commands[slices.Index(commands, entry)]);
+  command := strings.Split(entry, " ");
+  if command[0] == "SUB" {
+    topic, err := s.FindTopic(command[1])
+    if err != nil {
+      return err.Error()
+    }
+    return "SUB TO TOPIC: " + topic.TopicId
+  } else if command[0] == "CREATE" {
+    topic, err := s.FindTopic(command[1])
+    if err == nil && topic != nil {
+      return "Topic " + topic.TopicId +" already exist"
+    }
+    s.createTopic(client.Id, command[1]);
+    return "Topic" + command[1] + " created!"
+  }
   return "PONG to: " + client.Id
 }

@@ -16,6 +16,7 @@ type Server struct {
   Listener net.Listener
   client (map[string] *Client)
   topic (map[string] *Topic)
+  commandList []string
 }
 
 func (s *Server) Start() {
@@ -81,11 +82,16 @@ func NewServer(port string) (*Server, error) {
     return nil, err
   }
 
+  commandList := make([]string, 0, 10)
+  utils.GenerateCommand("PUB", &commandList);
+  utils.GenerateCommand("SUB", &commandList);
+
   return &Server{
     Listener: l,
     conn: make(chan net.Conn),
     shutdown: make(chan struct{}),
     client: make(map[string] *Client),
     topic: make(map[string] *Topic),
+    commandList: commandList,
   }, nil
 }

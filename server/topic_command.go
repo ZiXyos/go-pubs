@@ -40,6 +40,6 @@ func (topic *Topic) removePublisher(clientId string) error {
 func (s *Server) createTopic(clientId string, topicId string) {
   topic := NewTopic(clientId, topicId);
   topic.addPublisher(clientId);
-  s.topic[clientId] = topic;
+  s.topic[topicId] = topic;
 }
 
