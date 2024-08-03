@@ -6,7 +6,6 @@ import (
   "zixyos/goedges/server"
 )
 
-
 func main() {
   fmt.Println("[MAIN::LOG]: -> init")
   server, err := server.NewServer(":9091")

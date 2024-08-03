@@ -11,7 +11,6 @@ import (
 )
 
 func (s *Server) receive_command(client *client.Client) {
-  fmt.Println("ready to receive command")
   go func (conn net.Conn) {
     defer conn.Close();
     conn.Write([]byte("you can now send a command\n"));
@@ -40,12 +39,17 @@ func (s *Server) receive_command(client *client.Client) {
   }(<-client.Conn)
 }
 
+// need a command parser
 func (s *Server) handle_command(client *client.Client, entry string) string {
   command := strings.Split(entry, " ");
   if command[0] == "SUB" {
     topic, err := s.FindTopic(command[1])
     if err != nil {
       return err.Error()
+    }
+    error := topic.addSubscriber(client.Id);
+    if error != nil {
+      return error.Error()
     }
     return "SUB TO TOPIC: " + topic.TopicId
   } else if command[0] == "CREATE" {

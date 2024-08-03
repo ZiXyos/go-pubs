@@ -45,7 +45,6 @@ func (s *Server) handleConnection() {
 func (s *Server) addClient(con net.Conn) *Client {
   s.mutex.Lock()
   defer s.mutex.Unlock()
-  fmt.Println("Creating Client")
 
   clientId := utils.GenerateRandom()
   client := NewClient(clientId)
@@ -55,8 +54,6 @@ func (s *Server) addClient(con net.Conn) *Client {
   }()
 
   s.client[clientId] = client
-  fmt.Println("Client created")
-
   return client
 }
 
@@ -70,7 +67,6 @@ func (s *Server) removeClient(id string) {
 
 func (s *Server) handleClient(conn net.Conn) {
   defer s.wg.Done()
-  fmt.Println("New Connections here")
   client := s.addClient(conn)
   fmt.Println("NEW CLIENT CONNECTED: ", client.Id)
   s.receive_command(client)
