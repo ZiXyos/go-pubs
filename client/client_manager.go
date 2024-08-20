@@ -2,17 +2,19 @@ package client
 
 import (
 	"net"
+	"sync"
 )
 
 type Client struct {
   Id string
-  Conn chan net.Conn
+  Conn net.Conn
+  Mut sync.Mutex
 }
 
-func NewClient(id string) *Client {
+func NewClient(id string, conn net.Conn) *Client {
   return &Client { 
     Id: id,
-    Conn: make(chan net.Conn), 
+    Conn: conn, 
   }
 }
 

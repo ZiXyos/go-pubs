@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 	"zixyos/goedges/utils"
 )
 
@@ -18,8 +19,8 @@ func NewTopic(clientId string, topicId string) *Topic {
   return &Topic{
     CreatorId: clientId,
     TopicId: topicId,
-    publisher: make([]string, 10),
-    subscriber: make([]string, 10),
+    publisher: make([]string, 0,  10),
+    subscriber: make([]string, 0, 10),
   }
 }
 
@@ -65,15 +66,52 @@ func (topic *Topic) removeSubscriber(clientId string) error {
   return nil
 }
 
-func (s *Server) createTopic(clientId string, topicId string) {
+func (t *Topic) isPublihser(clientId string) (int, bool) {
+  pos, ok := slices.BinarySearch(t.publisher, clientId);
+  if !ok {
+    return -1, false
+  }
+  return pos, ok
+}
+
+func (s *Server) createTopic(clientId string, topicId string) (*Topic, error){
   topic := NewTopic(clientId, topicId);
   err := topic.addPublisher(clientId);
   if err != nil {
-    fmt.Println("error on publisher adding")
-    return
+    return nil, errors.New("error on publisher adding")
   }
 
   s.topic[topicId] = topic;
   fmt.Println("topic created: ", s.topic[topicId])
+  return s.topic[topicId], nil
 }
 
+func (s * Server) publishMessage(
+  clientId string,
+  topicId string,
+  message string,
+) (string, error) {
+  s.mutex.RLock();
+  topic, err := s.FindTopic(topicId);
+  s.mutex.RUnlock();
+  if err != nil {
+    return "", err
+  }
+
+  fmt.Println("Topic founded ", topic.TopicId);
+  if _, ok := topic.isPublihser(clientId); !ok {
+    return "", errors.New("Current client: " + clientId + " is not a publisher of topic " + topicId)
+  }
+
+  var localWg sync.WaitGroup;
+  for _, v := range topic.subscriber {
+    localWg.Add(1);
+    go func(subId string) {
+      defer localWg.Done();
+      s.sendMessage(subId, message);
+    }(v)
+  }
+
+  localWg.Wait();
+  return "Message sent to all Subscribers!", nil
+}

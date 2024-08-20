@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
+	. "zixyos/goedges/client"
 	"zixyos/goedges/utils"
-  . "zixyos/goedges/client"
 )
 
 type Server struct {
   wg sync.WaitGroup
-  mutex sync.Mutex
+  mutex sync.RWMutex
   conn chan net.Conn
   shutdown chan struct{}
   Listener net.Listener
@@ -33,27 +34,28 @@ func (s *Server) handleConnection() {
   defer s.wg.Done()
 
   for {
-    conn, err := s.Listener.Accept()
-    if err != nil {
-      break
+    select {
+    case<-s.shutdown:
+      return
+    default:
+      conn, err := s.Listener.Accept()
+      if err != nil {
+        break
+      }
+      s.wg.Add(1)
+      go s.handleClient(conn)
     }
-    s.wg.Add(1)
-    go s.handleClient(conn)
   }
 }
 
 func (s *Server) addClient(con net.Conn) *Client {
-  s.mutex.Lock()
-  defer s.mutex.Unlock()
+  s.mutex.Lock();
+  defer s.mutex.Unlock();
 
-  clientId := utils.GenerateRandom()
-  client := NewClient(clientId)
+  clientId := utils.GenerateRandom();
+  client := NewClient(clientId, con);
 
-  go func() {
-    client.Conn <- con
-  }()
-
-  s.client[clientId] = client
+  s.client[clientId] = client;
   return client
 }
 
@@ -64,12 +66,34 @@ func (s *Server) removeClient(id string) {
   fmt.Println("client: ", id, "removed!")
 }
 
+func (s *Server) sendMessage(clientId string, message string) {
+  s.mutex.RLock();
+  client, ok := s.client[clientId];
+  s.mutex.RUnlock();
+
+  if !ok {
+    fmt.Println("Client not found");
+    return
+  }
+
+  client.Mut.Lock();
+  defer client.Mut.Unlock();
+
+    client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second));
+  _, err := client.Conn.Write([]byte(message+"\n"));
+  if err != nil {
+    fmt.Println("Error sending message to client: ", clientId, err);
+    return 
+  }
+}
 
 func (s *Server) handleClient(conn net.Conn) {
-  defer s.wg.Done()
-  client := s.addClient(conn)
-  fmt.Println("NEW CLIENT CONNECTED: ", client.Id)
-  s.receive_command(client)
+  defer s.wg.Done();
+  defer conn.Close();
+
+  client := s.addClient(conn);
+  fmt.Println("NEW CLIENT CONNECTED: ", client.Id);
+  s.receive_command(client);
 }
 
 func NewServer(port string) (*Server, error) {

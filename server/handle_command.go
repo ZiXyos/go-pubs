@@ -4,20 +4,19 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"net"
 	"strings"
 	"time"
 	"zixyos/goedges/client"
 )
 
 func (s *Server) receive_command(client *client.Client) {
-  go func (conn net.Conn) {
-    defer conn.Close();
-    conn.Write([]byte("you can now send a command\n"));
-    reader := bufio.NewReader(conn);
+    defer client.Conn.Close();
+    client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+    client.Conn.Write([]byte("you can now send a command\n"));
+    reader := bufio.NewReader(client.Conn);
 
     for {
-      conn.SetReadDeadline(time.Now().Add(5 * time.Minute));
+      client.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute));
       message, err := reader.ReadString('\n');
       if err != nil {
         if err == io.EOF {
@@ -29,36 +28,96 @@ func (s *Server) receive_command(client *client.Client) {
       message = strings.TrimSpace(message);
       fmt.Println("[LOG::RECEIVED::MESSAGE]", message)
       response := s.handle_command(client, message) 
-      conn.SetWriteDeadline(time.Now().Add(5 * time.Minute));
-      _, err = conn.Write([]byte(response + "\n"));
+      client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Minute));
+      _, err = client.Conn.Write([]byte(response + "\n"));
       if err != nil {
         fmt.Printf("Error writing to client %s: %v\n", client.Id, err)
         break
       }
     }
-  }(<-client.Conn)
 }
 
 // need a command parser
 func (s *Server) handle_command(client *client.Client, entry string) string {
-  command := strings.Split(entry, " ");
-  if command[0] == "SUB" {
-    topic, err := s.FindTopic(command[1])
-    if err != nil {
-      return err.Error()
-    }
-    error := topic.addSubscriber(client.Id);
-    if error != nil {
-      return error.Error()
-    }
-    return "SUB TO TOPIC: " + topic.TopicId
-  } else if command[0] == "CREATE" {
-    topic, err := s.FindTopic(command[1])
-    if err == nil && topic != nil {
-      return "Topic " + topic.TopicId +" already exist"
-    }
-    s.createTopic(client.Id, command[1]);
-    return "Topic" + command[1] + " created!"
+  commands := strings.Fields(entry);
+  if len(commands) == 0 {
+    return "Error: Empty command"
   }
-  return "PONG to: " + client.Id
+
+  command := strings.ToUpper(commands[0]);
+  switch command {
+  case "SUB":
+    return s.handle_subscribe(client, commands)
+  case "PUB":
+    return s.handle_publish(client, commands)
+  case "CREATE":
+    return s.handle_create(client, commands)
+  default:
+    return fmt.Sprintf("Error: command '%s' not found", command)
+  }
+
+}
+
+func (s *Server) handle_subscribe(client *client.Client, command []string) string {
+  if len(command) != 2 {
+    return "Error SUB command require 1 argument: topic_name. check usage with the 'HELP' command."
+  }
+  topicId := command[1]
+
+  s.mutex.RLock()
+  topic, err := s.FindTopic(topicId);
+  s.mutex.RUnlock();
+
+  if err != nil {
+    return fmt.Sprintf("Error: %v", err)
+  }
+
+  if err := topic.addSubscriber(client.Id); err != nil {
+    return fmt.Sprintf("Error: %v", err)
+  }
+
+  return fmt.Sprintf("Subscribed to topic: %s", topic.TopicId)
+}
+
+func (s *Server) handle_create(client *client.Client, command []string) string {
+  if len(command) != 2 {
+    return "Error: CREATE command require 1 argument: topic_name. Check usage with the 'HELP' command."
+  }
+  topicId := command[1]
+
+  s.mutex.RLock();
+  topic, err := s.FindTopic(topicId);
+  s.mutex.RUnlock();
+  if err == nil && topic != nil {
+    return fmt.Sprintf("Error: Topic '%s' already exists", topic.TopicId)
+  }
+
+  topic, err = s.createTopic(client.Id, topicId);
+  if err != nil {
+    return fmt.Sprintf("Error creating topic: %v", err)
+  }
+
+  return fmt.Sprintf("Topic: '%s' created successfully", topic.TopicId)
+}
+
+func (s *Server) handle_publish(client *client.Client, commands []string) string {
+  if len(commands) < 3 {
+    return "Error: PUB command require 2 arguments: topic_name, message. Check usage with the 'HELP' command."
+  }
+  topicId := commands[1];
+  message := commands[2];
+
+  s.mutex.RLock();
+  topic, err := s.FindTopic(topicId);
+  s.mutex.RUnlock();
+  if err != nil {
+    return fmt.Sprintf("Error: Topic '%s' not found. check the topic list using the 'LIST' command", topicId)
+  }
+
+  res, err := s.publishMessage(client.Id, topic.TopicId, message);
+  if err != nil {
+    return fmt.Sprintf("Error: '%v' ", err)
+  }
+
+  return fmt.Sprintf(res)
 }
