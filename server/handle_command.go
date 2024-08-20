@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"zixyos/goedges/client"
+	"zixyos/goedges/utils"
 )
 
 func (s *Server) receive_command(client *client.Client) {
@@ -26,7 +27,6 @@ func (s *Server) receive_command(client *client.Client) {
       }
 
       message = strings.TrimSpace(message);
-      fmt.Println("[LOG::RECEIVED::MESSAGE]", message)
       response := s.handle_command(client, message) 
       client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Minute));
       _, err = client.Conn.Write([]byte(response + "\n"));
@@ -105,7 +105,8 @@ func (s *Server) handle_publish(client *client.Client, commands []string) string
     return "Error: PUB command require 2 arguments: topic_name, message. Check usage with the 'HELP' command."
   }
   topicId := commands[1];
-  message := commands[2];
+  // cannot handle command with extra args using single quote for now
+  message := utils.MessageParser(commands[2:]);
 
   s.mutex.RLock();
   topic, err := s.FindTopic(topicId);

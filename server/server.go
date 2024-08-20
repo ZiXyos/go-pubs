@@ -85,6 +85,7 @@ func (s *Server) sendMessage(clientId string, message string) {
     fmt.Println("Error sending message to client: ", clientId, err);
     return 
   }
+
 }
 
 func (s *Server) handleClient(conn net.Conn) {

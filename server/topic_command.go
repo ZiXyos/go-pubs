@@ -103,12 +103,16 @@ func (s * Server) publishMessage(
     return "", errors.New("Current client: " + clientId + " is not a publisher of topic " + topicId)
   }
 
+  formatted_message, err := utils.Format_message(clientId, message);
+  if err != nil {
+    return "", err
+  }
   var localWg sync.WaitGroup;
   for _, v := range topic.subscriber {
     localWg.Add(1);
     go func(subId string) {
       defer localWg.Done();
-      s.sendMessage(subId, message);
+      s.sendMessage(subId, string(formatted_message));
     }(v)
   }
 
