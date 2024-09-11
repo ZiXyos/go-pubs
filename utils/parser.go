@@ -12,19 +12,27 @@ import (
 
 // ["this, is, as, test"]
 func MessageParser(message []string) (string, []string) {
-  if (strings.Contains(message[0], "\"")) {
-    mark := 0;
-    response := make([]string, 0, 4096);
-    for k, v := range message {
-      if (strings.Contains(v, "\"")) {
-        mark++;
-      }
-      response = append(response, v);
-      if mark == 2 {
-        return strings.Join(response, " "), message[k:]
-      } 
-
+    if len(message) == 0 {
+        return "", nil
     }
-  }
-  return message[0], message[1:] 
+
+    var quotedParts []string
+    insideQuotes := false
+
+    for k, v := range message {
+        if strings.Contains(v, "\"") {
+            if insideQuotes {
+                quotedParts = append(quotedParts, strings.TrimRight(v, "\""))
+                joinedQuote := strings.Join(quotedParts, " ")
+                return strings.TrimLeft(joinedQuote, "\""), message[k+1:]
+            } else {
+                insideQuotes = true
+                quotedParts = append(quotedParts, strings.TrimLeft(v, "\""))
+            }
+        } else if insideQuotes {
+            quotedParts = append(quotedParts, v)
+        }
+    }
+
+    return message[0], message[1:]
 }
