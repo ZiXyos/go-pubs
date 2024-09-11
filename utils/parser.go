@@ -4,24 +4,27 @@ import (
 	"strings"
 )
 
-func MessageParser(message []string) string {
-  first, last := -1, -1;
-  
-    for _, v := range message {
-      for i, c := range v {
-        if c == '\'' && first == -1 {
-          first = i;
-        }
-        if c == '\'' && first != -1 {
-          last = i;
-        }
+/*
+** check if message list contain double quotes
+** send content only in double quote
+** send firs arg if not
+*/
+
+// ["this, is, as, test"]
+func MessageParser(message []string) (string, []string) {
+  if (strings.Contains(message[0], "\"")) {
+    mark := 0;
+    response := make([]string, 0, 4096);
+    for k, v := range message {
+      if (strings.Contains(v, "\"")) {
+        mark++;
       }
+      response = append(response, v);
+      if mark == 2 {
+        return strings.Join(response, " "), message[k:]
+      } 
+
     }
-
-  if first != -1 && last != -1  && first < last {
-    res := strings.Join(message[first:last+1], " ");
-    return res[1:len(res)-1]
   }
-
-  return ""
+  return message[0], message[1:] 
 }

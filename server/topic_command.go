@@ -98,7 +98,6 @@ func (s * Server) publishMessage(
     return "", err
   }
 
-  fmt.Println("Topic founded ", topic.TopicId);
   if _, ok := topic.isPublihser(clientId); !ok {
     return "", errors.New("Current client: " + clientId + " is not a publisher of topic " + topicId)
   }
