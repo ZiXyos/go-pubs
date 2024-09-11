@@ -107,7 +107,7 @@ func (s *Server) handle_publish(client *client.Client, commands []string) string
   topicId := commands[1];
   // cannot handle command with extra args using single quote for now
   message, others := utils.MessageParser(commands[2:]);
-  fmt.Println(others)
+  fmt.Println(message, others)
 
   s.mutex.RLock();
   topic, err := s.FindTopic(topicId);

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"strings"
 )
 
@@ -8,31 +9,85 @@ import (
 ** check if message list contain double quotes
 ** send content only in double quote
 ** send firs arg if not
-*/
+ */
 
 // ["this, is, as, test"]
 func MessageParser(message []string) (string, []string) {
-    if len(message) == 0 {
-        return "", nil
-    }
+	if len(message) == 0 {
+		return "", nil
+	}
 
-    var quotedParts []string
-    insideQuotes := false
+	// Join all parts into a single byte slice to avoid string concatenations
+	fullMsg := []byte(strings.Join(message, " "))
 
-    for k, v := range message {
-        if strings.Contains(v, "\"") {
-            if insideQuotes {
-                quotedParts = append(quotedParts, strings.TrimRight(v, "\""))
-                joinedQuote := strings.Join(quotedParts, " ")
-                return strings.TrimLeft(joinedQuote, "\""), message[k+1:]
-            } else {
-                insideQuotes = true
-                quotedParts = append(quotedParts, strings.TrimLeft(v, "\""))
-            }
-        } else if insideQuotes {
-            quotedParts = append(quotedParts, v)
-        }
-    }
+	var start, end int
+	inQuote := false
+	inBraces := false
+	braceCount := 0
+	escapeNext := false
 
-    return message[0], message[1:]
+	for k, v := range fullMsg {
+		switch v {
+		case '"':
+			if !inBraces && !inQuote {
+				start = k + 1
+				inQuote = true
+			} else if inQuote && !escapeNext {
+				end = k
+				if end < len(fullMsg) {
+					return string(fullMsg[start:end]), remainingMessage(fullMsg[end+1:])
+				}
+				return string(fullMsg[start:end]), nil
+			}
+		case '{':
+			if !inQuote && !inBraces {
+				start = k
+				inBraces = true
+				braceCount++
+			}
+		case '}':
+			if inBraces {
+				braceCount--
+				if braceCount == 0 {
+					end = k + 1
+					if end < len(fullMsg) {
+						return string(fullMsg[start:end]), remainingMessage(fullMsg[end+1:])
+					}
+					return string(fullMsg[start:end]), nil
+				}
+			}
+		case '\\':
+			escapeNext = !escapeNext
+		default:
+			escapeNext = false
+			if !inBraces && !inQuote && v != ' ' {
+				// Handle non-space, non-quote, non-brace characters
+				end = bytes.IndexByte(fullMsg[k:], ' ')
+				if end == -1 {
+					end = len(fullMsg)
+				} else {
+					end += k
+				}
+				if end < len(fullMsg) {
+					return string(fullMsg[k:end]), remainingMessage(fullMsg[end+1:])
+				}
+				return string(fullMsg[k:end]), nil
+			}
+		}
+	}
+
+	// If we finish the loop without closing quotes or braces, return the remaining string
+	if inBraces || inQuote {
+		return string(fullMsg[start:]), nil
+	}
+
+	return "", nil
+}
+
+func remainingMessage(fullMsg []byte) []string {
+	trimmed := bytes.TrimSpace(fullMsg)
+	if len(trimmed) == 0 {
+		return nil
+	}
+	return strings.Fields(string(trimmed))
 }
