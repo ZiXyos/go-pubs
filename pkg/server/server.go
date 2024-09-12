@@ -1,11 +1,16 @@
 package server
 
 import (
+	"bufio"
+	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
-	. "zixyos/goedges/client"
+	. "zixyos/goedges/internal/auth"
+	. "zixyos/goedges/pkg/client"
+	"zixyos/goedges/pkg/types"
 	"zixyos/goedges/utils"
 )
 
@@ -18,6 +23,9 @@ type Server struct {
   client (map[string] *Client)
   topic (map[string] *Topic)
   commandList []string
+  commandsList (map[string] *types.CommandFunc)
+  internalCommandsList (map[string] *types.InternalCommandFunc)
+  authentificator Auth
 }
 
 func (s *Server) Start() {
@@ -42,17 +50,34 @@ func (s *Server) handleConnection() {
       if err != nil {
         break
       }
+      fmt.Println(s.authenticateConn(conn));
       s.wg.Add(1)
       go s.handleClient(conn)
     }
   }
 }
 
+func (s *Server) authenticateConn(conn net.Conn) (*Client, error) {
+  reader := bufio.NewReader(conn);
+  line, err := reader.ReadString('\n');
+  if err != nil {
+    return nil, err
+  }
+
+  command := strings.Split(strings.TrimSpace(line), " ");
+  fun := *s.internalCommandsList[command[0]];
+  err = fun(command)
+  fmt.Println(command)
+
+  return nil, nil
+}
+
 func (s *Server) addClient(con net.Conn) *Client {
   s.mutex.Lock();
   defer s.mutex.Unlock();
 
-  clientId := utils.GenerateRandom();
+  gens := utils.GenerateRandom(func() {});
+  clientId := gens.GenerateRandomId();
   client := NewClient(clientId, con);
 
   s.client[clientId] = client;
@@ -97,8 +122,11 @@ func (s *Server) handleClient(conn net.Conn) {
   s.receive_command(client);
 }
 
-func NewServer(port string) (*Server, error) {
-  l, err := net.Listen("tcp", port)
+func NewServer(port string, config net.ListenConfig, auth Auth) (*Server, error) {
+  if auth == nil {
+    auth = &BasicAuth{}
+  }
+  l, err := config.Listen(context.Background(), "tcp", ":9091")
   if err != nil {
     return nil, err
   }
@@ -106,13 +134,24 @@ func NewServer(port string) (*Server, error) {
   commandList := make([]string, 0, 10)
   utils.GenerateCommand("PUB", &commandList);
   utils.GenerateCommand("SUB", &commandList);
+  utils.GenerateCommand("AUTH", &commandList);
 
-  return &Server{
+
+  serv := &Server{
     Listener: l,
     conn: make(chan net.Conn),
     shutdown: make(chan struct{}),
     client: make(map[string] *Client),
     topic: make(map[string] *Topic),
     commandList: commandList,
-  }, nil
+    commandsList: make(map[string]*types.CommandFunc),
+    internalCommandsList: make(map[string] *types.InternalCommandFunc), 
+    authentificator: auth,
+  }
+  utils.GenerateInternalCommandMap("AUTH", serv.AuthenticateCommand, &serv.internalCommandsList);
+  utils.GenerateCommandMap("CREATE", serv.handle_create, &serv.commandsList);
+  utils.GenerateCommandMap("PUB", serv.handle_publish, &serv.commandsList);
+  utils.GenerateCommandMap("SUB", serv.handle_subscribe, &serv.commandsList);
+
+  return serv, nil
 }

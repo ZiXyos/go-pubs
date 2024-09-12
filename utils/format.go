@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"zixyos/goedges/types"
+	"zixyos/goedges/pkg/types"
 )
 
+// this should be an internal thing i guess
 func Format_message[K string](
   sender string,
   message string,

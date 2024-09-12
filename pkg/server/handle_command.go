@@ -6,8 +6,8 @@ import (
 	"io"
 	"strings"
 	"time"
-	"zixyos/goedges/client"
-	"zixyos/goedges/utils"
+	"zixyos/goedges/pkg/client"
+  "zixyos/goedges/utils"
 )
 
 func (s *Server) receive_command(client *client.Client) {
@@ -38,6 +38,7 @@ func (s *Server) receive_command(client *client.Client) {
 }
 
 // need a command parser
+// refactor by using map function pointer
 func (s *Server) handle_command(client *client.Client, entry string) string {
   commands := strings.Fields(entry);
   if len(commands) == 0 {
@@ -45,17 +46,8 @@ func (s *Server) handle_command(client *client.Client, entry string) string {
   }
 
   command := strings.ToUpper(commands[0]);
-  switch command {
-  case "SUB":
-    return s.handle_subscribe(client, commands)
-  case "PUB":
-    return s.handle_publish(client, commands)
-  case "CREATE":
-    return s.handle_create(client, commands)
-  default:
-    return fmt.Sprintf("Error: command '%s' not found", command)
-  }
-
+  action := *s.commandsList[command]
+  return action(client, commands);
 }
 
 func (s *Server) handle_subscribe(client *client.Client, command []string) string {

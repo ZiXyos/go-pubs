@@ -5,19 +5,11 @@ import (
 	"strings"
 )
 
-/*
-** check if message list contain double quotes
-** send content only in double quote
-** send firs arg if not
- */
-
-// ["this, is, as, test"]
 func MessageParser(message []string) (string, []string) {
 	if len(message) == 0 {
 		return "", nil
 	}
 
-	// Join all parts into a single byte slice to avoid string concatenations
 	fullMsg := []byte(strings.Join(message, " "))
 
 	var start, end int
@@ -61,7 +53,6 @@ func MessageParser(message []string) (string, []string) {
 		default:
 			escapeNext = false
 			if !inBraces && !inQuote && v != ' ' {
-				// Handle non-space, non-quote, non-brace characters
 				end = bytes.IndexByte(fullMsg[k:], ' ')
 				if end == -1 {
 					end = len(fullMsg)
@@ -76,7 +67,6 @@ func MessageParser(message []string) (string, []string) {
 		}
 	}
 
-	// If we finish the loop without closing quotes or braces, return the remaining string
 	if inBraces || inQuote {
 		return string(fullMsg[start:]), nil
 	}
