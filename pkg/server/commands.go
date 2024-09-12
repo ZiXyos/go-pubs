@@ -9,23 +9,22 @@ import (
 )
 
 func (s *Server) AuthenticateCommand(input []string, conn net.Conn) (*client.Client, error) {
-  // AUTH <client-id> <server-password>
-  if len(input[1:]) < 2 {
+  s.mutex.Lock();
+  defer s.mutex.Unlock();
+  if len(input) < 3 {
     return nil, errors.New("Error trying to authenticate not so much arg")
   }
 
   fmt.Println(input[1])
   if client, ok := s.client[input[1]]; ok {
-    c, err := s.authentificator.Authentificate(
+    _, err := s.authentificator.Authentificate(
       auth.Credentials{Username: client.Id, Password: input[2]},
     );
     if err != nil {
       return nil, err
     }
-    fmt.Println(c);
-    return c, nil;
+    return client, nil;
   } else {
-    // will return a new client
     c, err := s.authentificator.Register(
       auth.Credentials{Username: input[1], Password: input[2]},
       conn,

@@ -77,6 +77,7 @@ func (s *Server) authenticateConn(conn net.Conn) (*Client, error) {
     return nil, err
   }
 
+  fmt.Println(err);
   return s.client[command[1]], nil
 }
 
