@@ -1,6 +1,10 @@
 package types
 
-import "zixyos/goedges/pkg/client"
+import (
+	"net"
+	"zixyos/goedges/pkg/client"
+)
 
-type InternalCommandFunc func([]string) error
-type CommandFunc func(*client.Client, []string) string
+
+type InternalCommandFunc func([]string, net.Conn) error;
+type CommandFunc func(*client.Client, []string) string;

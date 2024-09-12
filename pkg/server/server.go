@@ -3,12 +3,14 @@ package server
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
 	"sync"
 	"time"
 	. "zixyos/goedges/internal/auth"
+	"zixyos/goedges/pkg/client"
 	. "zixyos/goedges/pkg/client"
 	"zixyos/goedges/pkg/types"
 	"zixyos/goedges/utils"
@@ -50,9 +52,9 @@ func (s *Server) handleConnection() {
       if err != nil {
         break
       }
-      fmt.Println(s.authenticateConn(conn));
+      client, err := s.authenticateConn(conn);
       s.wg.Add(1)
-      go s.handleClient(conn)
+      go s.handleClient(client)
     }
   }
 }
@@ -65,23 +67,17 @@ func (s *Server) authenticateConn(conn net.Conn) (*Client, error) {
   }
 
   command := strings.Split(strings.TrimSpace(line), " ");
-  fun := *s.internalCommandsList[command[0]];
-  err = fun(command)
-  fmt.Println(command)
+  fun, ok := s.internalCommandsList[command[0]];
+  if !ok {
+    return nil, errors.New("Command not found")
+  }
+  deffered := *fun;
+  err = deffered(command, conn)
+  if err != nil {
+    return nil, err
+  }
 
-  return nil, nil
-}
-
-func (s *Server) addClient(con net.Conn) *Client {
-  s.mutex.Lock();
-  defer s.mutex.Unlock();
-
-  gens := utils.GenerateRandom(func() {});
-  clientId := gens.GenerateRandomId();
-  client := NewClient(clientId, con);
-
-  s.client[clientId] = client;
-  return client
+  return s.client[command[1]], nil
 }
 
 func (s *Server) removeClient(id string) {
@@ -113,12 +109,10 @@ func (s *Server) sendMessage(clientId string, message string) {
 
 }
 
-func (s *Server) handleClient(conn net.Conn) {
+func (s *Server) handleClient(client *client.Client) {
   defer s.wg.Done();
-  defer conn.Close();
+  defer client.Conn.Close();
 
-  client := s.addClient(conn);
-  fmt.Println("NEW CLIENT CONNECTED: ", client.Id);
   s.receive_command(client);
 }
 
@@ -148,7 +142,8 @@ func NewServer(port string, config net.ListenConfig, auth Auth) (*Server, error)
     internalCommandsList: make(map[string] *types.InternalCommandFunc), 
     authentificator: auth,
   }
-  utils.GenerateInternalCommandMap("AUTH", serv.AuthenticateCommand, &serv.internalCommandsList);
+  utils.GenerateInternalCommandMap("AUTH", serv.AuthenticateCommandWrapper, &serv.internalCommandsList);
+
   utils.GenerateCommandMap("CREATE", serv.handle_create, &serv.commandsList);
   utils.GenerateCommandMap("PUB", serv.handle_publish, &serv.commandsList);
   utils.GenerateCommandMap("SUB", serv.handle_subscribe, &serv.commandsList);

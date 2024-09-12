@@ -37,8 +37,6 @@ func (s *Server) receive_command(client *client.Client) {
     }
 }
 
-// need a command parser
-// refactor by using map function pointer
 func (s *Server) handle_command(client *client.Client, entry string) string {
   commands := strings.Fields(entry);
   if len(commands) == 0 {
@@ -97,7 +95,6 @@ func (s *Server) handle_publish(client *client.Client, commands []string) string
     return "Error: PUB command require 2 arguments: topic_name, message. Check usage with the 'HELP' command."
   }
   topicId := commands[1];
-  // cannot handle command with extra args using single quote for now
   message, others := utils.MessageParser(commands[2:]);
   fmt.Println(message, others)
 

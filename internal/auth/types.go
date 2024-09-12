@@ -1,26 +1,20 @@
 package auth
 
-type Credential struct {
+import (
+	"net"
+	"zixyos/goedges/pkg/client"
+)
+
+type Credentials struct {
   Username string;
   Password string;
 }
 
 type Auth interface {
-  Authentificate(cred Credential) error;
-  Register(cred Credential) error;
+  Authentificate(cred Credentials) (*client.Client, error);
+  Register(cred Credentials, conn net.Conn) (*client.Client, error);
 }
 
 type AuthConfig struct {
   
-}
-type BasicAuth struct {
-  config struct{}
-}
-
-func (auth *BasicAuth) Authentificate(cred Credential) error {
-  return nil
-} 
-
-func (auth *BasicAuth) Register(cred Credential) error {
-  return nil
 }
