@@ -3,7 +3,6 @@ package server
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -61,24 +60,26 @@ func (s *Server) handleConnection() {
 
 func (s *Server) authenticateConn(conn net.Conn) (*Client, error) {
   reader := bufio.NewReader(conn);
-  line, err := reader.ReadString('\n');
-  if err != nil {
-    return nil, err
-  }
+  for {
 
-  command := strings.Split(strings.TrimSpace(line), " ");
-  fun, ok := s.internalCommandsList[command[0]];
-  if !ok {
-    return nil, errors.New("Command not found")
-  }
-  deffered := *fun;
-  err = deffered(command, conn)
-  if err != nil {
-    return nil, err
-  }
+    line, err := reader.ReadString('\n');
+    if err != nil {
+      return nil, err
+    }
 
-  fmt.Println(err);
-  return s.client[command[1]], nil
+    command := strings.Split(strings.TrimSpace(line), " ");
+    fun, ok := s.internalCommandsList[command[0]];
+    if ok {
+      deffered := *fun;
+      err = deffered(command, conn)
+      if err != nil {
+        return nil, err
+      }
+
+      fmt.Println(err);
+      return s.client[command[1]], nil
+    }
+  }
 }
 
 func (s *Server) removeClient(id string) {
@@ -107,7 +108,6 @@ func (s *Server) sendMessage(clientId string, message string) {
     fmt.Println("Error sending message to client: ", clientId, err);
     return 
   }
-
 }
 
 func (s *Server) handleClient(client *client.Client) {
@@ -130,7 +130,6 @@ func NewServer(port string, config net.ListenConfig, auth Auth) (*Server, error)
   utils.GenerateCommand("PUB", &commandList);
   utils.GenerateCommand("SUB", &commandList);
   utils.GenerateCommand("AUTH", &commandList);
-
 
   serv := &Server{
     Listener: l,
