@@ -12,17 +12,6 @@ import (
 func initListener(network, address string, conn syscall.RawConn) error {
   var sockErr error;
   if err := conn.Control(func(fd uintptr) {
-    /*sockErr = syscall.SetsockoptInt(
-      int(fd), 
-      syscall.IPPROTO_TCP,
-      syscall.SO_RCVTIMEO,
-      60000,
-    );*/
-     // sockErr = utils.SetCustomTCPOption(int(fd), 200, "new_client")
-     /*sockErr = syscall.SetsockoptString(int(fd), syscall.IPPROTO_TCP, 200, "random_id")
-      if sockErr != nil {
-        fmt.Errorf("Error: unable to set SocketOptionString");
-      }*/
   }); err != nil {
     return err
   }

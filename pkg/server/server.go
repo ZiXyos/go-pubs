@@ -73,7 +73,9 @@ func (s *Server) authenticateConn(conn net.Conn) (*Client, error) {
       deffered := *fun;
       err = deffered(command, conn)
       if err != nil {
-        return nil, err
+        fmt.Println(err);
+        fmt.Fprintf(conn, "%s\n", err);
+        continue
       }
 
       fmt.Println(err);

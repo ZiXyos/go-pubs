@@ -12,6 +12,7 @@ func (s *Server) AuthenticateCommand(input []string, conn net.Conn) (*client.Cli
   s.mutex.Lock();
   defer s.mutex.Unlock();
   if len(input) < 3 {
+    fmt.Println("ERROR: MISSING ARGUMENTS ON AUTH")
     return nil, errors.New("Error trying to authenticate not so much arg")
   }
 
@@ -41,6 +42,7 @@ func (s *Server) AuthenticateCommand(input []string, conn net.Conn) (*client.Cli
 func (serv *Server) AuthenticateCommandWrapper(input []string, conn net.Conn) error {
     client, err := serv.AuthenticateCommand(input, conn)
     if err != nil {
+      fmt.Println("WRAPPER ERR: ", err)
         return err
     }
     serv.mutex.Lock()
