@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +14,8 @@ import (
 	. "zixyos/goedges/pkg/client"
 	"zixyos/goedges/pkg/types"
 	"zixyos/goedges/utils"
+
+	"github.com/charmbracelet/log"
 )
 
 type Server struct {
@@ -27,6 +30,7 @@ type Server struct {
   commandsList (map[string] *types.CommandFunc)
   internalCommandsList (map[string] *types.InternalCommandFunc)
   authentificator Auth
+  logger log.Logger
 }
 
 func (s *Server) Start() {
@@ -119,7 +123,12 @@ func (s *Server) handleClient(client *client.Client) {
   s.receive_command(client);
 }
 
-func NewServer(port string, config net.ListenConfig, auth Auth) (*Server, error) {
+func NewServer(
+  port string,
+  config net.ListenConfig,
+  auth Auth,
+  loggerOpt log.Options,
+) (*Server, error) {
   if auth == nil {
     auth = &BasicAuth{}
   }
@@ -143,12 +152,15 @@ func NewServer(port string, config net.ListenConfig, auth Auth) (*Server, error)
     commandsList: make(map[string]*types.CommandFunc),
     internalCommandsList: make(map[string] *types.InternalCommandFunc), 
     authentificator: auth,
+    logger: *log.NewWithOptions(os.Stderr, loggerOpt),
   }
   utils.GenerateInternalCommandMap("AUTH", serv.AuthenticateCommandWrapper, &serv.internalCommandsList);
 
   utils.GenerateCommandMap("CREATE", serv.handle_create, &serv.commandsList);
   utils.GenerateCommandMap("PUB", serv.handle_publish, &serv.commandsList);
   utils.GenerateCommandMap("SUB", serv.handle_subscribe, &serv.commandsList);
+
+  serv.logger.Info("Welcome !")
 
   return serv, nil
 }
