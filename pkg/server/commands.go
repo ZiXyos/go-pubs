@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"zixyos/goedges/internal/auth"
 	"zixyos/goedges/pkg/client"
@@ -12,11 +11,9 @@ func (s *Server) AuthenticateCommand(input []string, conn net.Conn) (*client.Cli
   s.mutex.Lock();
   defer s.mutex.Unlock();
   if len(input) < 3 {
-    fmt.Println("ERROR: MISSING ARGUMENTS ON AUTH")
     return nil, errors.New("Error trying to authenticate not so much arg")
   }
 
-  fmt.Println(input[1])
   if client, ok := s.client[input[1]]; ok {
     _, err := s.authentificator.Authentificate(
       auth.Credentials{Username: client.Id, Password: input[2]},
@@ -42,7 +39,6 @@ func (s *Server) AuthenticateCommand(input []string, conn net.Conn) (*client.Cli
 func (serv *Server) AuthenticateCommandWrapper(input []string, conn net.Conn) error {
     client, err := serv.AuthenticateCommand(input, conn)
     if err != nil {
-      fmt.Println("WRAPPER ERR: ", err)
         return err
     }
     serv.mutex.Lock()
@@ -50,3 +46,4 @@ func (serv *Server) AuthenticateCommandWrapper(input []string, conn net.Conn) er
     serv.mutex.Unlock()
     return nil
 }
+
