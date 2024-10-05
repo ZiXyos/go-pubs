@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"zixyos/goedges/pkg/types"
 )
 
@@ -19,7 +18,6 @@ func Format_message[K string](
 
   jsonBytes, err := json.Marshal(msg);
   if err != nil {
-    fmt.Println("Error: ", err);
     return nil, err 
   }
   return jsonBytes, nil

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"syscall"
 	"github.com/google/gopacket"
@@ -31,9 +30,6 @@ func ExtractClientId(conn net.Conn) (string, error) {
         return string(opt.OptionData), nil
       }
     }
-  }
-  for _, layer := range packet.Layers() {
-    fmt.Println("PACKET LAYER:", layer.LayerType());
   }
   return "", errors.New("client_id not found in TCP options")
 }
