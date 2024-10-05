@@ -21,7 +21,7 @@ func (s *Server) receive_command(client *client.Client) {
       message, err := reader.ReadString('\n');
       if err != nil {
         if err == io.EOF {
-          fmt.Printf("Client %s disconnected \n", client.Id);
+          s.logger.Infof("Client %s disconnected \n", client.Id);
         }
         break
       }
@@ -31,7 +31,7 @@ func (s *Server) receive_command(client *client.Client) {
       client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Minute));
       _, err = client.Conn.Write([]byte(response + "\n"));
       if err != nil {
-        fmt.Printf("Error writing to client %s: %v\n", client.Id, err)
+        s.logger.Errorf("Error writing to client %s: %v\n", client.Id, err);
         break
       }
     }
@@ -59,14 +59,17 @@ func (s *Server) handle_subscribe(client *client.Client, command []string) strin
   s.mutex.RUnlock();
 
   if err != nil {
-    return fmt.Sprintf("Error: %v", err)
+    s.logger.Errorf("%v", err)
+    return fmt.Sprintf("Error: %v\n", err)
   }
 
   if err := topic.addSubscriber(client.Id); err != nil {
-    return fmt.Sprintf("Error: %v", err)
+    s.logger.Errorf("%v", err)
+    return fmt.Sprintf("Error: %v\n", err)
   }
 
-  return fmt.Sprintf("Subscribed to topic: %s", topic.TopicId)
+  s.logger.Infof("Client %s subscribed to topic %s\n", client.Id, topic.TopicId);
+  return fmt.Sprintf("Subscribed to topic: %s\n", topic.TopicId)
 }
 
 func (s *Server) handle_create(client *client.Client, command []string) string {
@@ -79,15 +82,15 @@ func (s *Server) handle_create(client *client.Client, command []string) string {
   topic, err := s.FindTopic(topicId);
   s.mutex.RUnlock();
   if err == nil && topic != nil {
-    return fmt.Sprintf("Error: Topic '%s' already exists", topic.TopicId)
+    return fmt.Sprintf("Error: Topic '%s' already exists\n", topic.TopicId)
   }
 
   topic, err = s.createTopic(client.Id, topicId);
   if err != nil {
-    return fmt.Sprintf("Error creating topic: %v", err)
+    return fmt.Sprintf("Error creating topic: %v\n", err)
   }
 
-  return fmt.Sprintf("Topic: '%s' created successfully", topic.TopicId)
+  return fmt.Sprintf("Topic: '%s' created successfully\n", topic.TopicId)
 }
 
 func (s *Server) handle_publish(client *client.Client, commands []string) string {
@@ -96,13 +99,13 @@ func (s *Server) handle_publish(client *client.Client, commands []string) string
   }
   topicId := commands[1];
   message, others := utils.MessageParser(commands[2:]);
-  fmt.Println(message, others)
+  s.logger.Debug(message, others);
 
   s.mutex.RLock();
   topic, err := s.FindTopic(topicId);
   s.mutex.RUnlock();
   if err != nil {
-    return fmt.Sprintf("Error: Topic '%s' not found. check the topic list using the 'LIST' command", topicId)
+    return fmt.Sprintf("Error: Topic '%s' not found. check the topic list using the 'LIST' command\n", topicId)
   }
 
   res, err := s.publishMessage(client.Id, topic.TopicId, message);

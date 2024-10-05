@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"zixyos/goedges/pkg/types"
 	"go.step.sm/crypto/randutil"
 )
@@ -21,7 +20,6 @@ func (gen *GenerateRandom) GenerateRandomId() string {
 
 
 func GenerateCommand(newCommand string, commandList *[]string) {
-  fmt.Println("INIT NEW SERVER COMMAND: ", newCommand)
   SortedInsert(commandList, newCommand)
 }
 

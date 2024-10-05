@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"syscall"
@@ -21,7 +20,6 @@ func initListener(network, address string, conn syscall.RawConn) error {
 }
 
 func main() {
-  fmt.Println("[MAIN::LOG]: -> init")
   listenerConfig := net.ListenConfig{
     Control: initListener,
   }
@@ -34,7 +32,6 @@ func main() {
   server, err := server.NewServer(":9091", listenerConfig, nil, loggerOption);
 
   if err != nil {
-    fmt.Println(err)
     os.Exit(84)
   }
 

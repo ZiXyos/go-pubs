@@ -104,6 +104,7 @@ func (s * Server) publishMessage(
 
   formatted_message, err := utils.Format_message(clientId, message);
   if err != nil {
+    s.logger.Errorf("%v", err)
     return "", err
   }
   var localWg sync.WaitGroup;
