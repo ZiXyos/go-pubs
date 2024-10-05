@@ -93,7 +93,7 @@ func (s *Server) removeClient(id string) {
   s.mutex.Lock();
   defer s.mutex.Unlock();
   delete(s.client, id);
-  fmt.Println("client: ", id, "removed!")
+  s.logger.Infof("client: %s, removed!", id)
 }
 
 func (s *Server) sendMessage(clientId string, message string) {
@@ -102,7 +102,7 @@ func (s *Server) sendMessage(clientId string, message string) {
   s.mutex.RUnlock();
 
   if !ok {
-    fmt.Println("Client not found");
+    s.logger.Errorf("Client %s, not found", clientId)
     return
   }
 
@@ -112,7 +112,6 @@ func (s *Server) sendMessage(clientId string, message string) {
   _, err := client.Conn.Write([]byte(message+"\n"));
   if err != nil {
     s.logger.Errorf("Error sending message to client: %s, %v\n", clientId, err)
-    fmt.Println("Error sending message to client: ", clientId, err);
     return 
   }
   s.logger.Infof("Message sent to client: %s", clientId);
@@ -160,6 +159,9 @@ func NewServer(
   utils.GenerateCommandMap("CREATE", serv.handle_create, &serv.commandsList);
   utils.GenerateCommandMap("PUB", serv.handle_publish, &serv.commandsList);
   utils.GenerateCommandMap("SUB", serv.handle_subscribe, &serv.commandsList);
+  utils.GenerateCommandMap("CLIENTS", serv.ListClients, &serv.commandsList);
+  utils.GenerateCommandMap("SUBEDS", serv.ListSubbedClient, &serv.commandsList);
+  utils.GenerateCommandMap("TOPICS", serv.ListTopic, &serv.commandsList);
 
   serv.logger.Infof("Command Generated !")
 
