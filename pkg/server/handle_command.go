@@ -54,22 +54,25 @@ func (s *Server) handle_subscribe(client *client.Client, command []string) strin
   }
   topicId := command[1]
 
-  s.mutex.RLock()
+  client.Mut.Lock()
   topic, err := s.FindTopic(topicId);
-  s.mutex.RUnlock();
+  client.Mut.Unlock()
 
   if err != nil {
     s.logger.Errorf("%v", err)
     return fmt.Sprintf("Error: %v\n", err)
   }
 
+  client.Mut.Lock()
   if err := topic.addSubscriber(client.Id); err != nil {
     s.logger.Errorf("%v", err)
     return fmt.Sprintf("Error: %v\n", err)
   }
 
   s.logger.Infof("Client %s subscribed to topic %s\n", client.Id, topic.TopicId);
-  return fmt.Sprintf("Subscribed to topic: %s\n", topic.TopicId)
+  client.Mut.Unlock();
+
+  return fmt.Sprintf("Client %s, Subscribed to topic: %s\n", client.Id, topic.TopicId)
 }
 
 func (s *Server) handle_create(client *client.Client, command []string) string {

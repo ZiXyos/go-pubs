@@ -13,6 +13,7 @@ type Topic struct {
   TopicId string
   publisher []string   // clientId
   subscriber []string  // clientId
+  mutex sync.RWMutex
 }
 
 func NewTopic(clientId string, topicId string) *Topic {
@@ -25,9 +26,10 @@ func NewTopic(clientId string, topicId string) *Topic {
 }
 
 func (topic *Topic) addPublisher(clientId string) error {
-  i, ok := slices.BinarySearch(topic.publisher, clientId);
+  topic.mutex.Lock();
+  defer topic.mutex.Unlock();
+  _, ok := slices.BinarySearch(topic.publisher, clientId);
   if ok {
-    fmt.Println(i, ok)
     return errors.New("User " + clientId + " already a publisher")
   }
   utils.SortedInsert(&topic.publisher, clientId);
@@ -45,11 +47,18 @@ func (topic *Topic) removePublisher(clientId string) error {
 }
 
 func (topic *Topic) addSubscriber(clientId string) (error) {
-  _, ok := slices.BinarySearch(topic.subscriber, clientId);
+  topic.mutex.RLock();
+  idx, ok := slices.BinarySearch(topic.subscriber, clientId);
+  topic.mutex.RUnlock();
   if ok {
     return errors.New("User " + clientId + " already subscribed");
   }
-  
+
+  topic.mutex.Lock();
+  defer topic.mutex.Unlock();
+  if idx < len(topic.subscriber) && topic.subscriber[idx] == clientId {
+    return fmt.Errorf("user %s already subscribed", clientId)
+  }
   utils.SortedInsert(&topic.subscriber, clientId);
   return nil
 }
@@ -82,7 +91,7 @@ func (s *Server) createTopic(clientId string, topicId string) (*Topic, error){
   }
 
   s.topic[topicId] = topic;
-  fmt.Println("topic created: ", s.topic[topicId])
+  s.logger.Infof("Topic %s created", topic.TopicId);
   return s.topic[topicId], nil
 }
 
