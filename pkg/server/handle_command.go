@@ -49,41 +49,39 @@ func (s *Server) handle_command(client *client.Client, entry string) string {
 }
 
 func (s *Server) handle_subscribe(client *client.Client, command []string) string {
+  client.Mut.Lock();
+  defer client.Mut.Unlock();
   if len(command) != 2 {
     return "Error SUB command require 1 argument: topic_name. check usage with the 'HELP' command."
   }
   topicId := command[1]
 
-  client.Mut.Lock()
   topic, err := s.FindTopic(topicId);
-  client.Mut.Unlock()
 
   if err != nil {
     s.logger.Errorf("%v", err)
     return fmt.Sprintf("Error: %v\n", err)
   }
 
-  client.Mut.Lock()
   if err := topic.addSubscriber(client.Id); err != nil {
     s.logger.Errorf("%v", err)
     return fmt.Sprintf("Error: %v\n", err)
   }
 
   s.logger.Infof("Client %s subscribed to topic %s\n", client.Id, topic.TopicId);
-  client.Mut.Unlock();
 
   return fmt.Sprintf("Client %s, Subscribed to topic: %s\n", client.Id, topic.TopicId)
 }
 
 func (s *Server) handle_create(client *client.Client, command []string) string {
+  client.Mut.Lock();
+  defer client.Mut.Unlock();
   if len(command) != 2 {
     return "Error: CREATE command require 1 argument: topic_name. Check usage with the 'HELP' command."
   }
   topicId := command[1]
 
-  s.mutex.RLock();
   topic, err := s.FindTopic(topicId);
-  s.mutex.RUnlock();
   if err == nil && topic != nil {
     return fmt.Sprintf("Error: Topic '%s' already exists\n", topic.TopicId)
   }
@@ -97,6 +95,8 @@ func (s *Server) handle_create(client *client.Client, command []string) string {
 }
 
 func (s *Server) handle_publish(client *client.Client, commands []string) string {
+  client.Mut.Lock();
+  defer client.Mut.Unlock()
   if len(commands) < 3 {
     return "Error: PUB command require 2 arguments: topic_name, message. Check usage with the 'HELP' command."
   }
@@ -104,9 +104,7 @@ func (s *Server) handle_publish(client *client.Client, commands []string) string
   message, others := utils.MessageParser(commands[2:]);
   s.logger.Debug(message, others);
 
-  s.mutex.RLock();
   topic, err := s.FindTopic(topicId);
-  s.mutex.RUnlock();
   if err != nil {
     return fmt.Sprintf("Error: Topic '%s' not found. check the topic list using the 'LIST' command\n", topicId)
   }
